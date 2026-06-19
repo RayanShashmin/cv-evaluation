@@ -1,0 +1,29 @@
+{
+  "name": "cv-evaluation",
+  "version": "1.0.0",
+  "description": "Independent CV Evaluation Microservice",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google/genai": "^1.27.0",
+    "amqplib": "^0.10.9",
+    "aws-sdk": "^2.1692.0",
+    "axios": "^1.13.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "mammoth": "^1.11.0",
+    "mongoose": "^8.19.2",
+    "pdf-parse": "^1.1.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

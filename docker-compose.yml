@@ -1,0 +1,178 @@
+version: '3.8'
+
+services:
+  # Backend Server (Main API)
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: smart-job-portal-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Application Config
+      NODE_ENV: production
+      PORT: 8080
+
+      # Database - Using Hosted MongoDB Atlas
+      DB: "mongodb+srv://rayanshashmin:85lQKnXqvslKcjaS@cluster0.teris.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+
+      # JWT Authentication
+      JWTPRIVATEKEY: a7d1eabd715aae5b7435cde3f0916fffca22ea96f4d68db432c53f44f7dd1ced885db9bad86a9b43dfb6c1eee51f04b6dd47573adce55c545fa0128b975b4f70
+      SALT: 10
+
+      # AWS S3 Configuration
+      AWS_ACCESS_KEY_ID: AKIAYJG3FLTW2W6WQE42
+      AWS_SECRET_ACCESS_KEY: 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
+      AWS_REGION: eu-north-1
+      AWS_S3_BUCKET_NAME: cv-grade
+
+      # Google Gemini AI
+      GEMINI_API_KEY: AIzaSyA8NCybBxHplYNpdq5nLTdPORoV3vXlyd8
+      GEMINI_CHATBOT_API_KEY: AIzaSyAkj3kXUWce_YWpwfJ8RGv-U6I9s1oI0Y0
+
+      # Frontend URL
+      FRONTEND_URL: http://localhost:3000
+
+      # RabbitMQ - Using Hosted Amazon MQ
+      RABBITMQ_URL: amqps://admin:cvService@123@b-fd89573e-a7f7-4a84-a737-1bb91e71ae62.mq.us-east-1.on.aws:5671
+      CV_EVAL_QUEUE: cv-evaluation-queue
+      RESULT_QUEUE: cv-evaluation-results
+
+      # Microservices URLs
+      CV_EVAL_SERVICE_URL: http://cv-evaluation:8081
+      QUEUE_SERVICE_URL: http://queue-service:8081
+    networks:
+      - smart-job-network
+    volumes:
+      - ./server/Uploads:/app/Uploads
+
+  # CV Evaluation Microservice
+  cv-evaluation:
+    build:
+      context: ./cv-evaluation
+      dockerfile: Dockerfile
+    container_name: smart-job-portal-cv-evaluation
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      # Application Config
+      NODE_ENV: production
+      PORT: 8081
+      SERVICE_NAME: cv-evaluation-service
+
+      # Database - Using Hosted MongoDB Atlas
+      DB: "mongodb+srv://rayanshashmin:85lQKnXqvslKcjaS@cluster0.teris.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+
+      # RabbitMQ - Using Hosted Amazon MQ
+      RABBITMQ_URL: amqps://admin:cvService@123@b-fd89573e-a7f7-4a84-a737-1bb91e71ae62.mq.us-east-1.on.aws:5671
+      CV_EVAL_QUEUE: cv-evaluation-queue
+      RESULT_QUEUE: cv-evaluation-results
+
+      # Google Gemini AI for CV evaluation
+      GEMINI_API_KEY: AIzaSyA8NCybBxHplYNpdq5nLTdPORoV3vXlyd8
+
+      # AWS S3 for downloading CVs
+      AWS_ACCESS_KEY_ID: AKIAYJG3FLTW2W6WQE42
+      AWS_SECRET_ACCESS_KEY: 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
+      AWS_REGION: eu-north-1
+      AWS_S3_BUCKET_NAME: cv-grade
+
+      # Service URLs
+      QUEUE_SERVICE_URL: http://queue-service:8081
+      MAIN_BACKEND_URL: http://server:8080
+    networks:
+      - smart-job-network
+
+  # Email Notification Microservice
+  email-service:
+    build:
+      context: ./email-service
+      dockerfile: Dockerfile
+    container_name: smart-job-portal-email-service
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      # Application Config
+      NODE_ENV: production
+      PORT: 8082
+      SERVICE_NAME: email-notification-service
+
+      # Database - Using Hosted MongoDB Atlas
+      DB: "mongodb+srv://rayanshashmin:85lQKnXqvslKcjaS@cluster0.teris.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+
+      # RabbitMQ - Using Hosted Amazon MQ
+      RABBITMQ_URL: amqps://admin:cvService@123@b-fd89573e-a7f7-4a84-a737-1bb91e71ae62.mq.us-east-1.on.aws:5671
+      RESULT_QUEUE: cv-evaluation-results
+      EMAIL_QUEUE: email-notification-queue
+
+      # Email/SMTP Configuration (Gmail)
+      EMAIL_HOST: smtp.gmail.com
+      EMAIL_PORT: 587
+      EMAIL_SECURE: false
+      EMAIL_USER: priyanthiliyanage321@gmail.com
+      EMAIL_PASS: bhqpyhuwdlmnvksr
+      EMAIL_FROM: AI Recruit priyanthiliyanage321@gmail.com
+      EMAIL_FROM_NAME: Smart Job Portal
+
+      # Application URLs
+      FRONTEND_URL: http://localhost:3000
+    networks:
+      - smart-job-network
+
+  # Queue Management Service
+  queue-service:
+    build:
+      context: ./queue-service
+      dockerfile: Dockerfile
+    container_name: smart-job-portal-queue-service
+    restart: unless-stopped
+    ports:
+      - "8083:8081"
+    environment:
+      # Application Config
+      NODE_ENV: production
+      PORT: 8081
+
+      # RabbitMQ - Using Hosted Amazon MQ
+      RABBITMQ_URL: amqps://admin:cvService@123@b-fd89573e-a7f7-4a84-a737-1bb91e71ae62.mq.us-east-1.on.aws:5671
+      CV_EVAL_QUEUE: cv-evaluation-queue
+      RESULT_QUEUE: cv-evaluation-results
+      EMAIL_QUEUE: email-notification-queue
+    networks:
+      - smart-job-network
+
+  # Frontend Client (Next.js)
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
+    container_name: smart-job-portal-client
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
+
+      # Client-side AWS config (for Next.js)
+      NEXT_AWS_ACCESS_KEY_ID: AKIAYJG3FLTW2W6WQE42
+      NEXT_AWS_SECRET_ACCESS_KEY: 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
+      NEXT_AWS_REGION: eu-north-1
+      NEXT_AWS_S3_BUCKET_NAME: cv-grade
+
+      # Gemini Chatbot API
+      GEMINI_CHATBOT_API_KEY: AIzaSyAkj3kXUWce_YWpwfJ8RGv-U6I9s1oI0Y0
+    depends_on:
+      - server
+    networks:
+      - smart-job-network
+
+networks:
+  smart-job-network:
+    driver: bridge
